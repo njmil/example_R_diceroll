@@ -1,0 +1,207 @@
+---
+title: "R Programming Example: Create a dice-rolling program"
+author: "Mary Amon"
+date: "2023-03-15"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r}
+set.seed(123) # for reproducibility
+```
+
+
+Adapted from code examples in [Hands-On Programming with R by Garrett Grolemund](https://rstudio-education.github.io/hopr/)
+
+In this example, we will
+
+* 1. Create a 6-sided die object
+* 2. Create a function that will roll any number of 6-sided dice
+* 3. Use the function within a for loop to roll the dice 100 times
+* 4. Create a visualization of the 100 dice rolls
+
+Note that this example only uses the Base R language without any imported packages.
+In practice, you would import specialized packages to manage data wrangling and data visualization.
+
+# 1. Create a 6-sided die
+
+The : operator will create an atomic vector, a one-dimensional set of 1 data type.
+The <- operator is the assignment operator to save data to an R object.
+
+```{r}
+# the operator : to create a 1-dimensional vector with values 1,2,3,4,5,6
+# the operator <- assigns the vector to the R object called "die"
+die <- 1:6
+```
+
+# 2. Create a function that will roll any number of 6 sided dice
+
+Base R has a function called sample() that we can use to "roll" the die.
+sample() takes a sample from a set of elements.
+
+Every parameter in every R function has a name. You can specify which data should be assigned to which argument. This is optional, but aids readability and prevents errors as you use functions with many parameters. 
+
+To roll 1 die, the parameters are:
+
+* x: the elements to choose from (die)
+* size: the number of items to choose (1 roll)
+
+Note: by default, sample() will choose a value from x with equal probability for each element. 
+
+```{r}
+sample(x=die,size = 1)
+```
+
+If we want to roll 2 dice, we need to pass an additional parameter called replace.
+
+When we pick a value from [1,2,3,4,5,6] for the first time, we want to put back that value so that when we pick the second value, all the values are still in the set. 
+
+To roll 2 dice, the parameters are: 
+
+* x: the elements to choose from (die)
+* size: the number of items to choose (2 rolls)
+* replace: put the value back when selecting the next element (TRUE)
+
+```{r}
+sample(die,size = 2, replace = TRUE)
+```
+
+We can put the previous bit of code within a function that will let us roll any number of 6-sided dice we want. 
+
+Functions in R are another type of R object. Instead of containing data, they contain code.
+
+Every function in R has 3 basic parts. Here are the parts for our roll function:
+
+* 1. **Name:** use the <- operator to assign the function to the R object roll
+* 2. **Body of code:** within curly braces, define the die and call sample() to "roll" dice
+* 3. **Parameters:** within parenthesis, add parameter name numDice for how many dice we want to roll
+
+```{r}
+roll <- function(numDice){
+  die <- 1:6
+  sample(die, size=numDice, replace = TRUE)
+}
+```
+
+Now, we can call our function to play any games that have dice!
+
+```{r}
+#Craps have 2 dice
+crapsDice = 2
+crapsRoll = roll(crapsDice)
+print(crapsRoll)
+```
+
+```{r}
+#Yahtzee has 5 dice
+yahtzeeDice = 5
+yahtzeeRoll = roll(yahtzeeDice)
+print(yahtzeeRoll)
+```
+
+# 3. Use the function within a for loop to roll the dice 100 times
+
+Like other programming languages, R has loops for repeating a task.
+
+for loop in R resembles for loop in other languages, as it uses:
+
+* the keyword "for"
+* a parameter indicating how to loop
+* a body of code to loop over. 
+
+Similar to Python, the parameter for looping is iterating through a list. 
+
+To save output our loop to roll dice, we need to save the result as it runs. We will use that in a dataframe, which is a 2-dimensional version of a list. A dataframe groups vectors together in a two-dimensional table. Each column of a data frame can be a different type of data, but within a column, every cell must be the same type. 
+
+Note: If you use a for loop in R, you will often run into "Hey, you shouldn't be using a for loop!". That being said, sometimes you just need to use a loop, you know?
+
+```{r}
+data <- data.frame(die1=roll(1),die2=roll(1)) #initialize dataframe with 1 roll
+for (i in 1:99){ #iterate through the values in the atomic vector 1 to 100
+  data[nrow(data) + 1, ] <- roll(crapsDice) # roll the dice and store it in the next row
+}
+head(data,3) # inspect the table as a sanity check
+```
+
+# 4. Create a visualization of the 100 dice rolls
+
+We can access columns in a dataframe with the $ character.
+Let's add a new column called "total" adding up the value from die1 and die2
+
+```{r}
+data$total <- data$die1 + data$die2
+head(data,3)
+```
+
+We can use the Base R function aggregate() to group all the 1s, 2s, etc.
+
+The parameters of aggregate() are:
+
+* x: the data to be split into groups by grouping
+* by: the list of grouping elements
+* FUN: a function to compute the summary statistics. Here we use length, which is "length" in the sense of the length of a list. You could also use FUN = mean, median, sum, etc. 
+
+```{r}
+totalcounts <-aggregate(x=data$total, by = list(data$total), FUN = length)
+print(totalcounts)
+```
+
+We can graph this distribution using Base R barplot() function. 
+
+Parameters for barplot():
+
+* height: a vector of values describing the height of each bar in the barplot should be
+* names.arg: a vactor of names to be plotted below each bar
+
+```{r}
+myplot <- barplot(height=totalcounts$x,names.arg=totalcounts$Group.1)
+myplot
+```
+
+
+# Bonus: Compare our frequency table to the frequency of all possible combinations
+
+Base R has a function called expand.grid that returns a dataframe of all possible combinations.
+
+```{r}
+rolls <- expand.grid(die1=die,die2=die)
+head(rolls,3)
+```
+
+We can access columns in a dataframe with the $ character.
+Let's add a new column called "total" adding up the value from die1 and die2
+
+```{r}
+rolls$total <- rolls$die1 + rolls$die2
+head(rolls,3)
+```
+
+Base R aggregate() to group all the 1s, 2s, etc, in the total
+```{r}
+freq_df <-aggregate(rolls$total, by = list(rolls$total), FUN = length)
+freq_df
+```
+
+Compare our simulated rolls above to the distribution of all possible combinations.
+
+```{r}
+library(ggplot2)
+library(gridExtra)
+
+totalcounts$Group.1 <- as.factor(totalcounts$Group.1)
+myplot2 <- ggplot(data=totalcounts,aes(x=Group.1,y=x)) + 
+  geom_bar(stat="identity") +
+  xlab("Dice Total") +
+  ylab("Frequency")
+
+freq_df$Group.1 <- as.factor(freq_df$Group.1)
+distplot <- ggplot(data=freq_df,aes(x=Group.1,y=x)) +
+  geom_bar(stat="identity") +
+  xlab("Dice Total") +
+  ylab("Frequency")
+
+grid.arrange(myplot2,distplot)
+```
+
